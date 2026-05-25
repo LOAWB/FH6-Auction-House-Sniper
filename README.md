@@ -26,6 +26,7 @@ Watches the Auction House for the car you set up, buys it out the instant it app
 - Forza Horizon 6 on PC
 - 1920 x 1080 resolution - Full Screen, uncapped Frame Rate
 - Very Low graphics preset
+- Moving background turned **ON**
 - Keyboard menu navigation (the bot uses keys, not the mouse)
 - Wired ethernet strongly recommended
 
