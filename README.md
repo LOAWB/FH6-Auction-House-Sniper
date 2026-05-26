@@ -8,6 +8,8 @@ Watches the Auction House for the car you set up, buys it out the instant it app
 
 
 <img width="1655" height="792" alt="image-3" src="https://github.com/user-attachments/assets/61b58048-c3e6-4156-9510-0c2600aa7e9f" />
+<img width="340" height="488" alt="image" src="https://github.com/user-attachments/assets/d594b885-9e5d-4519-bbea-182a3d99999b" />
+
 
 ---
 
