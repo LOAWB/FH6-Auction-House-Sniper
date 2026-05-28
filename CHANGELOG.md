@@ -2,7 +2,7 @@
 
 Newest changes first. Each section header is the release date.
 
-## v1.1.4 - 2026-05-28
+## v1.2.0 - 2026-05-28
 
 ### Run the bot while doing something else (contributed by @LennardDenby)
 New **Win32 API input** toggle in Settings. With it on, the bot keeps buying cars even when FH6 isn't your active window. Alt-tab to a browser, watch YouTube, whatever. FH6 still needs to be running and not minimised. Off by default.
