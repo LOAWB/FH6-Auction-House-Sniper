@@ -32,6 +32,7 @@ Watches the Auction House for the car you set up, buys it out the instant it app
 - 1920 x 1080 resolution - Full Screen, uncapped Frame Rate
 - Very Low graphics preset
 - Moving background turned **ON** (Or set to false in config file)
+- UI scaling set to **100**
 - Game Language set to English
 - Keyboard menu navigation (the bot uses keys, not the mouse)
 - Wired ethernet strongly recommended
