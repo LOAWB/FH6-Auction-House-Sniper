@@ -51,6 +51,13 @@ class GameIO:
         lo, hi = self.cfg.effective_lime_bounds()
         return vision.selected_row_cy(frame, lo, hi)
 
+    def search_anchor(self):
+        """(title_cy, selected_row_cy) from one frame. Either may be None."""
+        frame = capture.grab_screen(self.cfg.window_title)
+        lo, hi = self.cfg.effective_lime_bounds()
+        return (vision.search_title_cy(frame, lo, hi),
+                vision.selected_row_cy(frame, lo, hi))
+
     def card_sold(self) -> bool:
         frame = capture.grab_screen(self.cfg.window_title)
         return vision.is_card_sold(frame)
@@ -330,6 +337,19 @@ class Sniper:
             self._poll_delay()
         return None
 
+    def _read_max_bid_target(self, retries: int = 4):
+        """Compute the Max Bid row's target Y from the lime title-bar anchor.
+        Retries past transition frames. None if the title can't be read - the
+        caller must then skip the nudge rather than guess a position."""
+        for _ in range(retries):
+            if self._stop:
+                return None
+            title_cy, _sel = self.io.search_anchor()
+            if title_cy is not None:
+                return title_cy + self.cfg.max_bid_title_dy
+            self._poll_delay()
+        return None
+
     def _cycle_max_bid(self) -> None:
         """Re-roll the Max Bid filter so FH6 returns fresh listings.
 
@@ -349,7 +369,10 @@ class Sniper:
         if not cfg.max_bid_closed_loop:
             self._cycle_max_bid_blind()
             return
-        target = cfg.max_bid_row_cy
+        target = self._read_max_bid_target()
+        if target is None:
+            log.info("max bid: title anchor not visible, skipping nudge")
+            return                      # safe: re-search refreshes without a nudge
         on_max_bid = False
         for _ in range(cfg.max_bid_nav_attempts):
             if self._stop:

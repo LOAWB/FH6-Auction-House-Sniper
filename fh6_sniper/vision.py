@@ -237,9 +237,54 @@ SEARCH_ROW_CENTERS = {
     "confirm": 742,
 }
 
+# The form can sit at different vertical positions (safe-area / overscan /
+# capture differences shift it by a row or more), so Max Bid must NOT be
+# targeted by a hardcoded absolute Y. Instead anchor to the solid lime title
+# bar - the one always-present lime element - and target Max Bid a fixed
+# distance below it. This self-calibrates to wherever the form renders.
+TITLE_TO_MAX_BID_DY = 279       # Max Bid centre minus title centre at 1080p
+ROW_PITCH = 53                  # vertical gap between field rows at 1080p
+
+# Where the title bar can appear (covers vertical shifts), and its geometry.
+TITLE_Y_TOP = 290
+TITLE_Y_BOTTOM = 460
+_TITLE_MIN_W = 500
+_TITLE_MIN_H = 30
+_TITLE_MIN_AR = 5.0
+_TITLE_MIN_FILL = 0.6           # solid lime fill, vs the outline row box
+
 # Window in which a field-row selection box can appear, and the box geometry.
 SEARCH_FIELD_Y_TOP = 395
-SEARCH_FIELD_Y_BOTTOM = 770
+SEARCH_FIELD_Y_BOTTOM = 900
+
+
+def search_title_cy(scene_bgr, lower, upper,
+                    y_top=TITLE_Y_TOP, y_bot=TITLE_Y_BOTTOM):
+    """Centre Y of the solid lime 'Search' title bar, or None.
+
+    The title is a SOLID lime banner (high fill ratio), distinct from the
+    selection outline box (low fill). It is the stable anchor for the row grid:
+    Max Bid sits TITLE_TO_MAX_BID_DY below this. None if no title bar is seen."""
+    mask = lime_mask(scene_bgr, lower, upper)
+    contours, _ = cv2.findContours(
+        mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    best_cy = None
+    best_area = 0
+    for c in contours:
+        x, y, w, h = cv2.boundingRect(c)
+        cy = y + h // 2
+        if cy < y_top or cy > y_bot:
+            continue
+        if w < _TITLE_MIN_W or h < _TITLE_MIN_H or w / h < _TITLE_MIN_AR:
+            continue
+        fill = int(cv2.countNonZero(mask[y:y + h, x:x + w])) / float(w * h)
+        if fill < _TITLE_MIN_FILL:
+            continue
+        area = w * h
+        if area > best_area:
+            best_area = area
+            best_cy = cy
+    return best_cy
 _ROW_BOX_MIN_W = 500
 _ROW_BOX_MIN_H = 25
 _ROW_BOX_MAX_H = 90

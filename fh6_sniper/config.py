@@ -49,10 +49,13 @@ class Config:
     # the off-by-one corruption blind counting suffered. Set False to fall back
     # to the blind method below.
     max_bid_closed_loop: bool = True
-    # Y centre of the Max Bid row at 1920x1080 (see vision.SEARCH_ROW_CENTERS).
-    max_bid_row_cy: int = 629
-    # How close (px) the detected selection box must be to count as "on Max
-    # Bid". Half the ~53px row pitch, so each row maps unambiguously.
+    # Max Bid row is targeted RELATIVE to the lime title bar, not at a fixed Y -
+    # the form renders at different heights on different setups, so a hardcoded
+    # Y can land on the wrong row. This is the px gap from the title centre down
+    # to the Max Bid row centre at 1920x1080 (see vision.TITLE_TO_MAX_BID_DY).
+    max_bid_title_dy: int = 279
+    # How close (px) the detected selection box must be to the computed target
+    # to count as "on Max Bid". Half the ~53px row pitch, so rows map cleanly.
     max_bid_row_tol: int = 26
     # Max presses to walk the cursor onto Max Bid before giving up and skipping
     # the nudge for this loop (skipping is safe - re-searching still refreshes).
