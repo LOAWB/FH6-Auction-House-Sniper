@@ -2,6 +2,28 @@
 
 Newest changes first. Each section header is the release date.
 
+## fork - 2026-06-03 (LOAWB)
+
+### Fix: buy-out dialog not detected on some builds (the bot wouldn't press the final buy)
+The bundled buy-out template only matched the old wide-band confirm dialog. On
+builds that render the newer compact "Buy Out" modal (green header + Yes/No),
+the full-resolution match never cleared threshold, so the bot opened the dialog
+but never recognised it and never pressed Yes. Re-cut `buy_out.png` /
+`buy_out_bgoff.png` from the new modal; verified NCC 1.00 and 0.96-0.99 with a
+different car behind the glass. Everything downstream (success, claim) already
+matched, so only the buy-out template changed.
+
+### New: Max Bid re-roll for faster listings
+FH6 caches search results for an identical query, so freshly-listed cars don't
+show until the query changes. The bot now nudges the Max Bid filter by one step
+before every search (oscillating to stay in range), forcing a fresh server
+query so new cars surface far faster. Toggle `cycle_max_bid` in config; tune
+`max_bid_row_index` / `max_bid_steps` if your Search layout differs. Set a mid
+Max Bid (~40,000,000) once and let it oscillate.
+
+### New: auto-built Windows exe
+Pushes build a ready-to-run bundle on GitHub Actions, published to Releases.
+
 ## v1.2.0 - 2026-05-28
 
 ### Run the bot while doing something else (contributed by @LennardDenby)

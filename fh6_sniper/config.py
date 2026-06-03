@@ -30,6 +30,21 @@ class Config:
     # bump if the bot occasionally opens Place Bid instead of Buy Out -
     # usually means FH6 didn't register the Down before Enter arrived.
     buyout_select_delay_ms: int = 0
+    # Re-roll the Max Bid filter on the Search screen before every search.
+    # FH6 caches results for an identical query, so newly-listed cars don't
+    # appear until you change the query. Nudging Max Bid each loop forces a
+    # fresh server query, so fresh listings surface far faster (the single
+    # biggest factor in snipe rate). Set a mid Max Bid (~40,000,000) once;
+    # the bot oscillates it +/- one step each search to stay in your range.
+    cycle_max_bid: bool = True
+    # Field layout on the Search screen, top-to-bottom: Make, Model,
+    # Performance Class, Car Type, Max Bid, Max Buyout. Max Bid is the 5th
+    # row -> 4 Downs from the top. Change only if a future UI reorders it.
+    max_bid_row_index: int = 4
+    # Up-presses to guarantee reaching the top row from any cursor position.
+    max_bid_top_presses: int = 8
+    # Left/Right presses to change the Max Bid value per search.
+    max_bid_steps: int = 1
     # Whether moving background is enabled in FH6 video settings. Picks
     # which buy_out template set to load - keeping the other set unused
     # saves a couple of full-res template matches per buyout poll.

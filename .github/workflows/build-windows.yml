@@ -1,0 +1,67 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Create entry point
+        shell: bash
+        run: |
+          echo "from fh6_sniper.main import main" > run.py
+          echo "if __name__ == '__main__':" >> run.py
+          echo "    main()" >> run.py
+
+      - name: Build exe
+        run: >
+          pyinstaller --onefile --windowed --name "FH6-Sniper"
+          --collect-all bettercam
+          --collect-all win11toast
+          --collect-all pynput
+          --collect-all win32timezone
+          run.py
+
+      - name: Assemble release folder (exe + templates next to it)
+        shell: bash
+        run: |
+          mkdir -p release/templates
+          cp dist/FH6-Sniper.exe release/
+          cp templates/*.png release/templates/
+          cp README.md release/ 2>/dev/null || true
+          cd release && 7z a -tzip ../FH6-Sniper-windows.zip . >/dev/null
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FH6-Sniper-windows
+          path: FH6-Sniper-windows.zip
+
+      - name: Publish to Releases (latest)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build
+          body: |
+            Auto-built Windows bundle. Download **FH6-Sniper-windows.zip**,
+            unzip anywhere, keep the `templates` folder next to the exe, and
+            run `FH6-Sniper.exe`. Includes the buy-out dialog fix and the
+            Max Bid re-roll feature.
+          files: FH6-Sniper-windows.zip

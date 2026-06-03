@@ -25,6 +25,8 @@ KEY_MAP = {
     "esc": Key.esc,
     "up": Key.up,
     "down": Key.down,
+    "left": Key.left,
+    "right": Key.right,
     "y": "y",
 }
 
@@ -33,6 +35,8 @@ VK_CODES = {
     "esc": 0x1B,
     "up": 0x26,
     "down": 0x28,
+    "left": 0x25,
+    "right": 0x27,
     "y": 0x59,
 }
 

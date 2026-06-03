@@ -307,6 +307,30 @@ class Sniper:
             self._press("down")
         return self.io.confirm_highlighted()
 
+    # Direction of the next Max Bid nudge. Oscillates so the value stays put
+    # on average instead of drifting out of the user's intended range.
+    _max_bid_dir = "right"
+
+    def _cycle_max_bid(self) -> None:
+        """Re-roll the Max Bid filter so FH6 returns fresh listings.
+
+        Anchors on the top of the Search form (spam Up), steps Down to the
+        Max Bid row, nudges its value Left/Right by one step, then leaves the
+        cursor there - _navigate_to_confirm spams Down afterwards to reach the
+        Confirm button, so we don't need to walk back. Direction alternates
+        each search to keep the value oscillating within range rather than
+        running away to the min/max."""
+        cfg = self.cfg
+        if self._stop:
+            return
+        self._status("Re-rolling Max Bid")
+        self._press("up", cfg.max_bid_top_presses)      # -> top row (Make)
+        if cfg.max_bid_row_index:
+            self._press("down", cfg.max_bid_row_index)  # -> Max Bid row
+        self._press(self._max_bid_dir, cfg.max_bid_steps)
+        log.info("max bid nudged %s x%d", self._max_bid_dir, cfg.max_bid_steps)
+        self._max_bid_dir = "left" if self._max_bid_dir == "right" else "right"
+
     def _recover(self) -> str:
         """ESC out toward Search config or AH landing.
 
@@ -463,6 +487,8 @@ class Sniper:
             return "recover_failed"
 
         self._status("Searching")
+        if cfg.cycle_max_bid:
+            self._cycle_max_bid()
         if not self._navigate_to_confirm():
             return self._recover()
         result = self._press_until(
