@@ -392,6 +392,26 @@ class Sniper:
             self._press("esc")
             s = self._await_settle(prev=s)
 
+    def _back_to_search_config(self, known=None) -> None:
+        """Fast path between no-car loops: ESC from the results screen back to
+        the Search config so the next loop re-searches immediately, instead of
+        round-tripping all the way out to the landing menu and re-opening
+        Search (~1.5s/loop saved). One ESC from a results page lands on Search
+        config. If it overshoots to the landing menu that's harmless -
+        _goto_search_config sorts out whatever state we end on next loop."""
+        s = known if known is not None else self.io.screen()
+        for _ in range(4):
+            if self._stop:
+                return
+            if s in (Screen.SEARCH_CONFIG, Screen.AH_LANDING):
+                return
+            if s == Screen.UNKNOWN:
+                self.sleeper(0.2)
+                s = self.io.screen()
+                continue
+            self._press("esc")
+            s = self._await_settle(prev=s)
+
     def _escape_player_options(self) -> str:
         """ESC out of the Player Options menu a sold car can open. ESCs
         even from UNKNOWN screens; stops at AH_LANDING.
@@ -494,9 +514,9 @@ class Sniper:
         result = self._press_until(
             "enter", Screen.SEARCH_CONFIG,
             {Screen.RESULTS_HAS_CARS, Screen.RESULTS_EMPTY},
-            reach=cfg.timeout_results_s)
+            reach=min(cfg.timeout_results_s, 8.0))
         if result is not Screen.RESULTS_HAS_CARS:
-            self._back_to_landing(known=result)
+            self._back_to_search_config(known=result)
             return "no_cars"
 
         # The RESULTS_HAS_CARS banner renders before the card UI itself.
@@ -508,7 +528,7 @@ class Sniper:
         slot = self.io.first_buyable_slot()
         if slot == 0:
             self._status("All listings sold, skipping")
-            self._back_to_landing(known=result)
+            self._back_to_search_config(known=result)
             return "no_cars"
 
         self._status("Car found, buying out")
@@ -517,7 +537,7 @@ class Sniper:
 
         if slot > 1 and self.io.first_buyable_slot() != slot:
             self._status("Listing sold during navigation, skipping")
-            self._back_to_landing(known=result)
+            self._back_to_search_config(known=result)
             return "no_cars"
 
         seen = self._press_until(

@@ -22,10 +22,12 @@ class Config:
     hdr_lime_hsv_lower: tuple = (18, 110, 110)
     hdr_lime_hsv_upper: tuple = (60, 255, 255)
     hdr_mode: bool = False
-    # key timing in ms (min, max), randomised per press
-    key_hold_ms: tuple = (20, 45)
-    between_keys_ms: tuple = (20, 55)
-    poll_interval_ms: tuple = (40, 90)
+    # key timing in ms (min, max), randomised per press. Tightened for speed;
+    # FH6 menus accept input this fast. If you ever see dropped keys (e.g. the
+    # bot opens Place Bid instead of Buy Out), nudge these back up a little.
+    key_hold_ms: tuple = (14, 28)
+    between_keys_ms: tuple = (12, 30)
+    poll_interval_ms: tuple = (25, 60)
     # extra ms between selecting Buy Out (Down) and confirming (Enter).
     # bump if the bot occasionally opens Place Bid instead of Buy Out -
     # usually means FH6 didn't register the Down before Enter arrived.
@@ -49,12 +51,14 @@ class Config:
     # which buy_out template set to load - keeping the other set unused
     # saves a couple of full-res template matches per buyout poll.
     moving_background: bool = True
-    # timeouts in seconds
-    timeout_results_s: float = 25.0
+    # timeouts in seconds. timeout_results_s is also hard-capped at 8s in code
+    # so an unrecognised post-search screen (e.g. the single-listing expanded
+    # Auction Details view) can't hang the loop for 25s like it used to.
+    timeout_results_s: float = 8.0
     timeout_outcome_s: float = 25.0
     timeout_claim_s: float = 20.0
     timeout_generic_s: float = 10.0
-    loop_pace_s: float = 0.15
+    loop_pace_s: float = 0.05
     # auto-stop
     auto_stop_enabled: bool = True
     max_cars: int = 1

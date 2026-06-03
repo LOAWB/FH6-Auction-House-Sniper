@@ -2,6 +2,22 @@
 
 Newest changes first. Each section header is the release date.
 
+## fork - 2026-06-03b (LOAWB) - speed + hang fix
+
+### Faster loop (no more landing-menu round-trip)
+Between empty searches the bot used to ESC all the way out to the Auction
+House landing menu and re-open Search every loop (~1.7s wasted/loop). It now
+ESCs back to the Search screen and re-searches in place. Plus tighter key/poll
+timing defaults and a faster loop pace. Net: roughly half the per-loop time.
+
+### Fix: 25s hang on the expanded single-listing view
+When a search surfaced the expanded "Auction Details" view it scored under
+threshold and the bot sat in the 25s results timeout. Capped that wait at 8s
+(and lowered the default) so it re-searches quickly instead of hanging.
+
+Note: timing defaults only apply to a fresh config.json. Delete your existing
+config.json (next to the exe) to pick them up, or edit the values by hand.
+
 ## fork - 2026-06-03 (LOAWB)
 
 ### Fix: buy-out dialog not detected on some builds (the bot wouldn't press the final buy)
