@@ -314,18 +314,22 @@ class Sniper:
     def _cycle_max_bid(self) -> None:
         """Re-roll the Max Bid filter so FH6 returns fresh listings.
 
-        Assumes the cursor is on the Confirm button (the caller runs
-        _navigate_to_confirm first, which pins it there via the lime
-        highlight). Max Bid sits a fixed number of rows above Confirm, so we
-        step straight up to it and nudge - no more spamming to the top of the
-        form and back. The caller re-anchors on Confirm afterwards. Direction
-        alternates so the value oscillates within range instead of running to
-        a min/max limit."""
+        Reaches Max Bid from the TOP of the form, not by counting up from the
+        Confirm button. The top is the only reliable anchor: the cursor can't
+        move above the first row, so spamming Up (with margin) always lands
+        there even if the first keypress is eaten by screen-load lag. We then
+        step Down a fixed count to Max Bid. A small settle first lets the
+        freshly-loaded screen become input-ready so that first key isn't
+        dropped. Direction alternates so the value oscillates within range
+        instead of running to a min/max limit."""
         cfg = self.cfg
         if self._stop:
             return
         self._status("Re-rolling Max Bid")
-        self._press("up", cfg.max_bid_rows_above_confirm)   # Confirm -> Max Bid
+        if cfg.search_ready_delay_ms:
+            self.sleeper(cfg.search_ready_delay_ms / 1000.0)
+        self._press("up", cfg.max_bid_top_presses)      # -> top row (extra Ups harmless)
+        self._press("down", cfg.max_bid_row_from_top)   # -> Max Bid row
         self._press(self._max_bid_dir, cfg.max_bid_steps)
         log.info("max bid nudged %s x%d", self._max_bid_dir, cfg.max_bid_steps)
         self._max_bid_dir = "left" if self._max_bid_dir == "right" else "right"
@@ -506,16 +510,14 @@ class Sniper:
             return "recover_failed"
 
         self._status("Searching")
-        # Anchor on the Confirm button first, then step up to Max Bid, nudge,
-        # and re-anchor on Confirm before submitting. Anchoring on the lime
-        # Confirm highlight makes the Max Bid hop reliable from any cursor
-        # position without walking the whole form.
-        if not self._navigate_to_confirm():
-            return self._recover()
+        # Re-roll Max Bid from the top of the form, THEN navigate down to the
+        # Confirm button and submit. _navigate_to_confirm presses Down until
+        # the lime Confirm highlight, so it absorbs whatever row the nudge left
+        # us on.
         if cfg.cycle_max_bid:
             self._cycle_max_bid()
-            if not self._navigate_to_confirm():
-                return self._recover()
+        if not self._navigate_to_confirm():
+            return self._recover()
         result = self._press_until(
             "enter", Screen.SEARCH_CONFIG,
             {Screen.RESULTS_HAS_CARS, Screen.RESULTS_EMPTY},

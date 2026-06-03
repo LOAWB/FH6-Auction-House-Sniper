@@ -2,12 +2,20 @@
 
 Newest changes first. Each section header is the release date.
 
-## fork - 2026-06-03c (LOAWB) - leaner Max Bid hop
+## fork - 2026-06-03d (LOAWB) - Max Bid reliability over long runs
 
-Max Bid re-roll no longer spams Up to the top of the form and back down
-(12 keypresses). It now anchors on the Confirm button (lime highlight) and
-steps just 2 rows up to Max Bid, nudges, and re-anchors - ~4 keypresses,
-faster and more reliable. Tunable via max_bid_rows_above_confirm.
+Fix the bug where, after running a while, the bot would nudge the wrong filter
+and stop finding cars. Cause: the lean "Up 2 from Confirm" hop assumed a known
+cursor position, but the first keypress after the Search screen loads often
+gets dropped by load lag - so Up 2 became Up 1, landing on the wrong row and
+changing the wrong filter (e.g. Make/Model), corrupting the search.
+
+Fix: reach Max Bid from the TOP of the form again (spam Up with margin - the
+cursor can't overshoot the top, so a dropped first Up is harmless), after a
+short settle so the screen is input-ready. Then navigate down to Confirm and
+submit. Also backed the key timing off the over-aggressive values that were
+contributing to dropped keys. Tunable: max_bid_top_presses, max_bid_row_from_top,
+search_ready_delay_ms.
 
 ## fork - 2026-06-03b (LOAWB) - speed + hang fix
 

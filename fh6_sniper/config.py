@@ -22,12 +22,13 @@ class Config:
     hdr_lime_hsv_lower: tuple = (18, 110, 110)
     hdr_lime_hsv_upper: tuple = (60, 255, 255)
     hdr_mode: bool = False
-    # key timing in ms (min, max), randomised per press. Tightened for speed;
-    # FH6 menus accept input this fast. If you ever see dropped keys (e.g. the
-    # bot opens Place Bid instead of Buy Out), nudge these back up a little.
-    key_hold_ms: tuple = (14, 28)
-    between_keys_ms: tuple = (12, 30)
-    poll_interval_ms: tuple = (25, 60)
+    # key timing in ms (min, max), randomised per press. Moderate - fast
+    # enough to be snappy, slow enough that FH6 doesn't drop keys mid-burst
+    # (dropped keys during navigation are what made the Max Bid hop land on
+    # the wrong field). Don't push these much lower.
+    key_hold_ms: tuple = (18, 38)
+    between_keys_ms: tuple = (18, 42)
+    poll_interval_ms: tuple = (35, 75)
     # extra ms between selecting Buy Out (Down) and confirming (Enter).
     # bump if the bot occasionally opens Place Bid instead of Buy Out -
     # usually means FH6 didn't register the Down before Enter arrived.
@@ -39,11 +40,19 @@ class Config:
     # biggest factor in snipe rate). Set a mid Max Bid (~40,000,000) once;
     # the bot oscillates it +/- one step each search to stay in your range.
     cycle_max_bid: bool = True
-    # The bot anchors on the Confirm button (via the lime highlight) and steps
-    # straight up to the Max Bid row. Search layout bottom-up is:
-    # Confirm <- Max Buyout <- Max Bid, so Max Bid is 2 rows above Confirm.
-    # Change only if a future UI reorders the fields.
-    max_bid_rows_above_confirm: int = 2
+    # Reaching Max Bid reliably: spam Up to the top of the form first. The
+    # cursor physically can't go above the top row, so even if the first Up is
+    # eaten by screen-load lag (the key that always drops), the extra Ups still
+    # land us on the top row - dropped Ups are harmless here. Then step Down a
+    # fixed count to Max Bid. Search layout top-down: Make, Model, Performance
+    # Class, Car Type, Max Bid -> 4 Downs. (The old "Up 2 from Confirm" broke
+    # exactly because a dropped first Up made it Up 1, landing on the wrong row
+    # and changing the wrong filter.)
+    max_bid_top_presses: int = 7
+    max_bid_row_from_top: int = 4
+    # Settle so the freshly-loaded Search screen is input-ready before the
+    # first key - the first key after a screen change is the one that drops.
+    search_ready_delay_ms: int = 250
     # Left/Right presses to change the Max Bid value per search.
     max_bid_steps: int = 1
     # Whether moving background is enabled in FH6 video settings. Picks
