@@ -39,12 +39,11 @@ class Config:
     # biggest factor in snipe rate). Set a mid Max Bid (~40,000,000) once;
     # the bot oscillates it +/- one step each search to stay in your range.
     cycle_max_bid: bool = True
-    # Field layout on the Search screen, top-to-bottom: Make, Model,
-    # Performance Class, Car Type, Max Bid, Max Buyout. Max Bid is the 5th
-    # row -> 4 Downs from the top. Change only if a future UI reorders it.
-    max_bid_row_index: int = 4
-    # Up-presses to guarantee reaching the top row from any cursor position.
-    max_bid_top_presses: int = 8
+    # The bot anchors on the Confirm button (via the lime highlight) and steps
+    # straight up to the Max Bid row. Search layout bottom-up is:
+    # Confirm <- Max Buyout <- Max Bid, so Max Bid is 2 rows above Confirm.
+    # Change only if a future UI reorders the fields.
+    max_bid_rows_above_confirm: int = 2
     # Left/Right presses to change the Max Bid value per search.
     max_bid_steps: int = 1
     # Whether moving background is enabled in FH6 video settings. Picks

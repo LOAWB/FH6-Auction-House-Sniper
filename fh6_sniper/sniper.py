@@ -314,19 +314,18 @@ class Sniper:
     def _cycle_max_bid(self) -> None:
         """Re-roll the Max Bid filter so FH6 returns fresh listings.
 
-        Anchors on the top of the Search form (spam Up), steps Down to the
-        Max Bid row, nudges its value Left/Right by one step, then leaves the
-        cursor there - _navigate_to_confirm spams Down afterwards to reach the
-        Confirm button, so we don't need to walk back. Direction alternates
-        each search to keep the value oscillating within range rather than
-        running away to the min/max."""
+        Assumes the cursor is on the Confirm button (the caller runs
+        _navigate_to_confirm first, which pins it there via the lime
+        highlight). Max Bid sits a fixed number of rows above Confirm, so we
+        step straight up to it and nudge - no more spamming to the top of the
+        form and back. The caller re-anchors on Confirm afterwards. Direction
+        alternates so the value oscillates within range instead of running to
+        a min/max limit."""
         cfg = self.cfg
         if self._stop:
             return
         self._status("Re-rolling Max Bid")
-        self._press("up", cfg.max_bid_top_presses)      # -> top row (Make)
-        if cfg.max_bid_row_index:
-            self._press("down", cfg.max_bid_row_index)  # -> Max Bid row
+        self._press("up", cfg.max_bid_rows_above_confirm)   # Confirm -> Max Bid
         self._press(self._max_bid_dir, cfg.max_bid_steps)
         log.info("max bid nudged %s x%d", self._max_bid_dir, cfg.max_bid_steps)
         self._max_bid_dir = "left" if self._max_bid_dir == "right" else "right"
@@ -507,10 +506,16 @@ class Sniper:
             return "recover_failed"
 
         self._status("Searching")
-        if cfg.cycle_max_bid:
-            self._cycle_max_bid()
+        # Anchor on the Confirm button first, then step up to Max Bid, nudge,
+        # and re-anchor on Confirm before submitting. Anchoring on the lime
+        # Confirm highlight makes the Max Bid hop reliable from any cursor
+        # position without walking the whole form.
         if not self._navigate_to_confirm():
             return self._recover()
+        if cfg.cycle_max_bid:
+            self._cycle_max_bid()
+            if not self._navigate_to_confirm():
+                return self._recover()
         result = self._press_until(
             "enter", Screen.SEARCH_CONFIG,
             {Screen.RESULTS_HAS_CARS, Screen.RESULTS_EMPTY},

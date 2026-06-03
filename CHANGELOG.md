@@ -2,6 +2,13 @@
 
 Newest changes first. Each section header is the release date.
 
+## fork - 2026-06-03c (LOAWB) - leaner Max Bid hop
+
+Max Bid re-roll no longer spams Up to the top of the form and back down
+(12 keypresses). It now anchors on the Confirm button (lime highlight) and
+steps just 2 rows up to Max Bid, nudges, and re-anchors - ~4 keypresses,
+faster and more reliable. Tunable via max_bid_rows_above_confirm.
+
 ## fork - 2026-06-03b (LOAWB) - speed + hang fix
 
 ### Faster loop (no more landing-menu round-trip)
