@@ -220,6 +220,67 @@ def is_confirm_highlighted(scene_bgr, lower, upper, region=CONFIRM_ROW) -> bool:
     return int(cv2.countNonZero(mask)) > 300
 
 
+# Search-screen field-row centre Y positions at 1920x1080. The currently
+# selected row is drawn as a wide lime OUTLINE box (dark interior, lime
+# border). Reading that box's centre Y tells us exactly which row the cursor
+# is on - the key to fast, dropped-key-proof Max Bid navigation. Lime is a
+# saturated colour absent from the auction-house scene, so this is immune to
+# the moving background bleeding through the translucent search form (which
+# breaks any white/brightness-based row detection).
+SEARCH_ROW_CENTERS = {
+    "make": 420,
+    "model": 467,
+    "performance_class": 519,
+    "car_type": 572,
+    "max_bid": 629,
+    "max_buyout": 678,
+    "confirm": 742,
+}
+
+# Window in which a field-row selection box can appear, and the box geometry.
+SEARCH_FIELD_Y_TOP = 395
+SEARCH_FIELD_Y_BOTTOM = 770
+_ROW_BOX_MIN_W = 500
+_ROW_BOX_MIN_H = 25
+_ROW_BOX_MAX_H = 90
+_ROW_BOX_MIN_AR = 6.0           # wide, short banner
+_ROW_BOX_MAX_FILL = 0.45        # outline box, not a solid lime fill (the title)
+
+
+def selected_row_cy(scene_bgr, lower, upper,
+                    y_top=SEARCH_FIELD_Y_TOP, y_bot=SEARCH_FIELD_Y_BOTTOM):
+    """Centre Y of the Search screen's lime selection outline box, or None.
+
+    Picks the largest banner-shaped lime region whose interior is mostly dark
+    (a low lime fill ratio) - the selection cursor. The lime-FILLED title bar
+    and any solid lime element are rejected by the fill-ratio test, and the
+    unselected rows carry no lime at all, so exactly the selected row is
+    returned. None means no selection box was visible (e.g. a mid-transition
+    frame): callers must treat that as 'position unknown' and refuse to nudge a
+    filter value blindly."""
+    mask = lime_mask(scene_bgr, lower, upper)
+    contours, _ = cv2.findContours(
+        mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    best_cy = None
+    best_area = 0
+    for c in contours:
+        x, y, w, h = cv2.boundingRect(c)
+        cy = y + h // 2
+        if cy < y_top or cy > y_bot:
+            continue
+        if (w < _ROW_BOX_MIN_W or h < _ROW_BOX_MIN_H or h > _ROW_BOX_MAX_H
+                or w / h < _ROW_BOX_MIN_AR):
+            continue
+        fill = int(cv2.countNonZero(mask[y:y + h, x:x + w])) / float(w * h)
+        if fill > _ROW_BOX_MAX_FILL:
+            continue
+        area = w * h
+        if area > best_area:
+            best_area = area
+            best_cy = cy
+    return best_cy
+
+
 # Yellow SOLD stamp HSV range and per-slot regions. Cards stack at a 202px
 # pitch; regions stop above the live time-left pill and the price-row icons.
 SOLD_HSV_LOWER = (20, 120, 120)

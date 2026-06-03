@@ -40,18 +40,31 @@ class Config:
     # biggest factor in snipe rate). Set a mid Max Bid (~40,000,000) once;
     # the bot oscillates it +/- one step each search to stay in your range.
     cycle_max_bid: bool = True
-    # Reaching Max Bid reliably: spam Up to the top of the form first. The
-    # cursor physically can't go above the top row, so even if the first Up is
-    # eaten by screen-load lag (the key that always drops), the extra Ups still
-    # land us on the top row - dropped Ups are harmless here. Then step Down a
-    # fixed count to Max Bid. Search layout top-down: Make, Model, Performance
-    # Class, Car Type, Max Bid -> 4 Downs. (The old "Up 2 from Confirm" broke
-    # exactly because a dropped first Up made it Up 1, landing on the wrong row
-    # and changing the wrong filter.)
+    # Closed-loop Max Bid navigation (default). The selected field row is drawn
+    # with a lime OUTLINE box; the bot reads that box's Y to know which row the
+    # cursor is on, then steps straight to Max Bid, re-checking after every
+    # press. A dropped key just costs one extra press - it can never land on the
+    # wrong field. Far faster than the old run-to-the-top-and-count-down hop
+    # (no trip to the top, only the few presses actually needed) and immune to
+    # the off-by-one corruption blind counting suffered. Set False to fall back
+    # to the blind method below.
+    max_bid_closed_loop: bool = True
+    # Y centre of the Max Bid row at 1920x1080 (see vision.SEARCH_ROW_CENTERS).
+    max_bid_row_cy: int = 629
+    # How close (px) the detected selection box must be to count as "on Max
+    # Bid". Half the ~53px row pitch, so each row maps unambiguously.
+    max_bid_row_tol: int = 26
+    # Max presses to walk the cursor onto Max Bid before giving up and skipping
+    # the nudge for this loop (skipping is safe - re-searching still refreshes).
+    max_bid_nav_attempts: int = 12
+    # Blind fallback (used only when max_bid_closed_loop is False): spam Up to
+    # the top of the form, then step Down a fixed count. Search layout top-down:
+    # Make, Model, Performance Class, Car Type, Max Bid -> 4 Downs.
     max_bid_top_presses: int = 7
     max_bid_row_from_top: int = 4
-    # Settle so the freshly-loaded Search screen is input-ready before the
-    # first key - the first key after a screen change is the one that drops.
+    # Settle so the freshly-loaded Search screen is input-ready before the first
+    # key. Only used by the blind fallback - the closed-loop path re-detects
+    # instead of waiting, so it needs no settle.
     search_ready_delay_ms: int = 250
     # Left/Right presses to change the Max Bid value per search.
     max_bid_steps: int = 1

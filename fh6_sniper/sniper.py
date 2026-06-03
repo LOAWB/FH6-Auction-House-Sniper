@@ -45,6 +45,12 @@ class GameIO:
         lo, hi = self.cfg.effective_lime_bounds()
         return vision.is_confirm_highlighted(frame, lo, hi)
 
+    def selected_row_cy(self):
+        """Centre Y of the Search screen's lime selection box, or None."""
+        frame = capture.grab_screen(self.cfg.window_title)
+        lo, hi = self.cfg.effective_lime_bounds()
+        return vision.selected_row_cy(frame, lo, hi)
+
     def card_sold(self) -> bool:
         frame = capture.grab_screen(self.cfg.window_title)
         return vision.is_card_sold(frame)
@@ -311,27 +317,69 @@ class Sniper:
     # on average instead of drifting out of the user's intended range.
     _max_bid_dir = "right"
 
+    def _read_row_cy(self, retries: int = 3):
+        """Selected-row centre Y, retrying past transient None (transition
+        frames). Returns None only if no selection box is seen across all
+        retries."""
+        for _ in range(retries):
+            if self._stop:
+                return None
+            cy = self.io.selected_row_cy()
+            if cy is not None:
+                return cy
+            self._poll_delay()
+        return None
+
     def _cycle_max_bid(self) -> None:
         """Re-roll the Max Bid filter so FH6 returns fresh listings.
 
-        Reaches Max Bid from the TOP of the form, not by counting up from the
-        Confirm button. The top is the only reliable anchor: the cursor can't
-        move above the first row, so spamming Up (with margin) always lands
-        there even if the first keypress is eaten by screen-load lag. We then
-        step Down a fixed count to Max Bid. A small settle first lets the
-        freshly-loaded screen become input-ready so that first key isn't
-        dropped. Direction alternates so the value oscillates within range
-        instead of running to a min/max limit."""
+        Closed-loop: read which field row the cursor is on (the lime selection
+        outline box) and step straight to Max Bid, re-detecting after every
+        press. Unlike the old run-to-the-top-and-count-down hop, this makes
+        only the few presses actually needed (no trip to the top) and a dropped
+        key merely costs one more press - it can never land on the wrong field.
+        The value is nudged ONLY once the cursor is confirmed on Max Bid; if the
+        row can't be read, the nudge is skipped (re-searching alone still
+        refreshes results) rather than risk corrupting another filter. Nudge
+        direction alternates so the value oscillates within range."""
         cfg = self.cfg
         if self._stop:
             return
         self._status("Re-rolling Max Bid")
+        if not cfg.max_bid_closed_loop:
+            self._cycle_max_bid_blind()
+            return
+        target = cfg.max_bid_row_cy
+        on_max_bid = False
+        for _ in range(cfg.max_bid_nav_attempts):
+            if self._stop:
+                return
+            cy = self._read_row_cy()
+            if cy is None:
+                log.info("max bid: selection not visible, skipping nudge")
+                break
+            if abs(cy - target) <= cfg.max_bid_row_tol:
+                on_max_bid = True
+                break
+            self._press("down" if cy < target else "up")
+        if not on_max_bid:
+            return                      # safe: re-search refreshes without a nudge
+        self._press(self._max_bid_dir, cfg.max_bid_steps)
+        log.info("max bid nudged %s x%d", self._max_bid_dir, cfg.max_bid_steps)
+        self._max_bid_dir = "left" if self._max_bid_dir == "right" else "right"
+
+    def _cycle_max_bid_blind(self) -> None:
+        """Legacy blind Max Bid hop: spam Up to the top of the form (the only
+        position the cursor can't overshoot), then step Down a fixed count to
+        Max Bid. Slower and off-by-one-prone under dropped keys; kept as a
+        fallback for when closed-loop detection is disabled."""
+        cfg = self.cfg
         if cfg.search_ready_delay_ms:
             self.sleeper(cfg.search_ready_delay_ms / 1000.0)
         self._press("up", cfg.max_bid_top_presses)      # -> top row (extra Ups harmless)
         self._press("down", cfg.max_bid_row_from_top)   # -> Max Bid row
         self._press(self._max_bid_dir, cfg.max_bid_steps)
-        log.info("max bid nudged %s x%d", self._max_bid_dir, cfg.max_bid_steps)
+        log.info("max bid nudged %s x%d (blind)", self._max_bid_dir, cfg.max_bid_steps)
         self._max_bid_dir = "left" if self._max_bid_dir == "right" else "right"
 
     def _recover(self) -> str:
