@@ -324,31 +324,34 @@ class Sniper:
     # on average instead of drifting out of the user's intended range.
     _max_bid_dir = "right"
 
-    def _read_row_cy(self, retries: int = 3):
-        """Selected-row centre Y, retrying past transient None (transition
-        frames). Returns None only if no selection box is seen across all
-        retries."""
+    def _read_anchor(self, retries: int = 4):
+        """One frame -> (title_cy, selected_row_cy), retrying past frames that
+        are missing either (transition / mid-animation). Reading BOTH from the
+        same frame keeps the target and the cursor consistent even while the
+        form is still sliding open. Returns (None, None) if it can't get both."""
         for _ in range(retries):
             if self._stop:
-                return None
-            cy = self.io.selected_row_cy()
-            if cy is not None:
-                return cy
-            self._poll_delay()
-        return None
+                return None, None
+            title_cy, sel_cy = self.io.search_anchor()
+            if title_cy is not None and sel_cy is not None:
+                return title_cy, sel_cy
+            self.sleeper(self.cfg.max_bid_settle_ms / 1000.0)
+        return None, None
 
-    def _read_max_bid_target(self, retries: int = 4):
-        """Compute the Max Bid row's target Y from the lime title-bar anchor.
-        Retries past transition frames. None if the title can't be read - the
-        caller must then skip the nudge rather than guess a position."""
-        for _ in range(retries):
+    def _wait_form_settled(self, max_reads: int = 12):
+        """Block until the form has stopped sliding (two consecutive title
+        reads agree within a few px), so navigation doesn't chase a moving
+        layout. Returns the settled title_cy, or None if it never settles."""
+        prev = None
+        for _ in range(max_reads):
             if self._stop:
                 return None
             title_cy, _sel = self.io.search_anchor()
-            if title_cy is not None:
-                return title_cy + self.cfg.max_bid_title_dy
-            self._poll_delay()
-        return None
+            if title_cy is not None and prev is not None and abs(title_cy - prev) <= 5:
+                return title_cy
+            prev = title_cy
+            self.sleeper(self.cfg.max_bid_settle_ms / 1000.0)
+        return prev
 
     def _cycle_max_bid(self) -> None:
         """Re-roll the Max Bid filter so FH6 returns fresh listings.
@@ -369,23 +372,30 @@ class Sniper:
         if not cfg.max_bid_closed_loop:
             self._cycle_max_bid_blind()
             return
-        target = self._read_max_bid_target()
-        if target is None:
-            log.info("max bid: title anchor not visible, skipping nudge")
-            return                      # safe: re-search refreshes without a nudge
+        # Let the form finish sliding open before reading positions.
+        self._wait_form_settled()
         on_max_bid = False
+        confirmations = 0
         for _ in range(cfg.max_bid_nav_attempts):
             if self._stop:
                 return
-            cy = self._read_row_cy()
-            if cy is None:
-                log.info("max bid: selection not visible, skipping nudge")
-                break
-            if abs(cy - target) <= cfg.max_bid_row_tol:
-                on_max_bid = True
-                break
-            self._press("down" if cy < target else "up")
+            title_cy, sel_cy = self._read_anchor()
+            if title_cy is None or sel_cy is None:
+                log.info("max bid: form not readable, skipping nudge")
+                return                  # safe: re-search refreshes without a nudge
+            target = title_cy + cfg.max_bid_title_dy
+            if abs(sel_cy - target) <= cfg.max_bid_row_tol:
+                confirmations += 1
+                if confirmations >= 2:  # two same-frame reads agree -> trust it
+                    on_max_bid = True
+                    break
+                self.sleeper(cfg.max_bid_settle_ms / 1000.0)
+                continue
+            confirmations = 0
+            self._press("down" if sel_cy < target else "up")
+            self.sleeper(cfg.max_bid_settle_ms / 1000.0)
         if not on_max_bid:
+            log.info("max bid: never confirmed on row, skipping nudge")
             return                      # safe: re-search refreshes without a nudge
         self._press(self._max_bid_dir, cfg.max_bid_steps)
         log.info("max bid nudged %s x%d", self._max_bid_dir, cfg.max_bid_steps)

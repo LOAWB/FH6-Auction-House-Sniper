@@ -57,6 +57,10 @@ class Config:
     # How close (px) the detected selection box must be to the computed target
     # to count as "on Max Bid". Half the ~53px row pitch, so rows map cleanly.
     max_bid_row_tol: int = 26
+    # Pause (ms) after each navigation press and between confirm reads, so the
+    # cursor and the form's open animation are settled before the next read.
+    # Without it the bot reads mid-animation and stops on the wrong row.
+    max_bid_settle_ms: int = 70
     # Max presses to walk the cursor onto Max Bid before giving up and skipping
     # the nudge for this loop (skipping is safe - re-searching still refreshes).
     max_bid_nav_attempts: int = 12
