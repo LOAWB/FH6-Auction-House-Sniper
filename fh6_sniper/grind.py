@@ -153,11 +153,20 @@ class SkillGrinder:
         return False
 
     def run(self) -> str:
-        """Loop the grind. Returns: stopped | done."""
+        """Loop the grind as a state machine, so it can be started from ANY
+        screen (mid-race, on the results screen, or on the start menu) and do
+        the right thing. Each iteration it looks at the screen:
+          - results screen  -> reset (X) to the start menu, then start (Enter)
+          - start menu       -> start the race (Enter)
+          - anything else    -> assume driving: hold gas until the race finishes
+        A lap is counted only when a race we were driving actually finishes.
+        Returns: stopped | done.
+        """
         cfg = self.cfg
         total = cfg.sp_max_iterations
         log.info("=== skill grind started (%d laps, gas=%s, vision=%s) ===",
-                 total, cfg.gas_key, self._results_tmpl is not None)
+                 total, cfg.gas_key,
+                 self._results_tmpl is not None and self._start_tmpl is not None)
         if not self._focused():
             self._status("Paused: FH6 not focused")
             while not self._focused():
@@ -165,44 +174,47 @@ class SkillGrinder:
                     self._status("Skill grind stopped")
                     return "stopped"
                 self.sleeper(0.5)
-        for i in range(total):
+        while self.laps < total:
             if self._stop:
                 break
-            # Hold gas until the race finishes (results screen appears).
-            self._status(f"Skill grind {i + 1}/{total}: holding gas")
+            if self._on_results():
+                # On the results screen: reset to the start menu, then launch.
+                self._status(f"Skill grind {self.laps}/{total}: restarting")
+                if not self._interruptible_sleep(cfg.sp_restart_settle_s):
+                    break
+                if not self._reset_to_menu():
+                    if self._stop:
+                        break
+                    self._status("Skill grind: restart not confirmed, retrying")
+                    continue
+                self._status(f"Skill grind {self.laps}/{total}: starting race")
+                if not self._start_race():
+                    if self._stop:
+                        break
+                    self._status("Skill grind: start not confirmed, retrying")
+                continue
+            if self._on_start_menu():
+                # On the pre-race menu: just launch the race.
+                self._status(f"Skill grind {self.laps}/{total}: starting race")
+                if not self._start_race():
+                    if self._stop:
+                        break
+                    self._status("Skill grind: start not confirmed, retrying")
+                continue
+            # Otherwise we're driving (or loading / counting down): hold gas
+            # until the race finishes (the results screen appears).
+            self._status(f"Skill grind {self.laps + 1}/{total}: holding gas")
             outcome = self._hold_gas_until_results(cfg.sp_race_hold_s)
             if outcome == "stop":
                 break
             if outcome == "timeout":
-                # Never saw the finish. Don't blindly restart (we might still be
-                # driving); just loop and keep watching.
-                self._status(f"Skill grind {i + 1}/{total}: "
-                             "no finish detected, watching")
+                self._status(f"Skill grind {self.laps + 1}/{total}: "
+                             "no finish yet, watching")
                 log.info("grind: gas-hold cap hit without a results screen")
                 continue
-            self.laps = i + 1                       # race finished
+            self.laps += 1                          # a driven race finished
             if self.on_lap:
                 self.on_lap(self.laps, total)
-            if i + 1 >= total:
-                break                               # last lap, no restart
-            # Reset (X) until the start menu is up, then start the race (Enter)
-            # until the menu disappears - both vision-confirmed, no blind waits.
-            self._status(f"Skill grind {i + 1}/{total} done: restarting")
-            if not self._interruptible_sleep(cfg.sp_restart_settle_s):
-                break
-            if not self._reset_to_menu():
-                if self._stop:
-                    break
-                self._status(f"Skill grind {i + 1}/{total}: "
-                             "restart not confirmed, retrying")
-                continue                            # re-watch; try again
-            self._status(f"Skill grind {i + 1}/{total}: starting race")
-            if not self._start_race():
-                if self._stop:
-                    break
-                self._status(f"Skill grind {i + 1}/{total}: "
-                             "start not confirmed, retrying")
-                continue
         if self._stop:
             self._status(f"Skill grind stopped ({self.laps} laps)")
             return "stopped"
