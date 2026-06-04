@@ -342,6 +342,24 @@ SLOT_POPULATED_WHITE_S_MAX = 25
 SLOT_POPULATED_WHITE_MIN = 30      # min pixels matching the above per slot
 
 
+# Skill-grind results screen: the "A Continue / X Restart / Y Watch Replay"
+# prompt bar along the bottom. Distinct and stable, so it cleanly marks "the
+# race finished and Restart is available". Region is padded for vertical shift.
+SP_RESULTS_REGION = (30, 930, 1000, 1080)
+
+
+def is_sp_results(scene_bgr, template, threshold,
+                  region=SP_RESULTS_REGION) -> bool:
+    """True if the race results / restart screen is showing."""
+    if template is None:
+        return False
+    x1, y1, x2, y2 = region
+    crop = scene_bgr[y1:y2, x1:x2]
+    if crop.size == 0:
+        return False
+    return match_template(crop, template) >= threshold
+
+
 def is_card_sold(scene_bgr, region=SOLD_STAMP_REGION) -> bool:
     """True if the top result card shows the yellow SOLD stamp."""
     x1, y1, x2, y2 = region

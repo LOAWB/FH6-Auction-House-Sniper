@@ -116,23 +116,31 @@ class Config:
     # Key that accelerates the car (held during the race). On the ROG Ally
     # keyboard this is "w". Must be one of actions.KEY_MAP.
     gas_key: str = "w"
-    # Seconds to hold the accelerator each lap. Make it a touch longer than the
-    # race so the car definitely crosses the finish (24s race -> ~26s).
-    sp_race_hold_s: float = 26.0
-    # Pause after the race finishes before pressing Restart, so the results
-    # screen (A Continue / X Restart) is up and ready for the key.
-    sp_restart_settle_s: float = 1.2
+    # The grind is VISION-DRIVEN, not on a timer: it holds gas until it sees the
+    # race results screen (so it can't desync from the race length), then
+    # presses Restart until that screen actually clears. sp_race_hold_s is just
+    # the SAFETY CAP on how long to hold gas while waiting for the finish.
+    sp_race_hold_s: float = 45.0
+    # Match confidence (0-1) for recognising the results screen (the
+    # "A Continue / X Restart" prompt bar). 1.0 on a clean match in testing.
+    sp_results_threshold: float = 0.70
+    # Pause after the results screen appears before pressing Restart.
+    sp_restart_settle_s: float = 0.8
     # Reset / restart key on the results screen (X). Must be in actions.KEY_MAP.
     sp_restart_key: str = "x"
+    # Press Restart up to this many times, each waiting sp_reset_timeout_s for
+    # the results screen to clear, before giving up on the reset for this lap.
+    sp_reset_attempts: int = 4
+    sp_reset_timeout_s: float = 4.0
     # Pause between Restart and the "start race event" confirm, so that screen
     # is up before Enter is pressed.
     sp_confirm_delay_s: float = 1.5
     # Key that starts the race event after restarting (Enter). Set blank ("") to
     # skip this press if your route restarts straight into the countdown.
     sp_start_key: str = "enter"
-    # Seconds to wait after starting for the reload + 3-2-1 countdown before the
-    # next gas hold begins. Bump if your reload is slow.
-    sp_start_delay_s: float = 8.0
+    # Small settle after starting before the next gas hold begins (the gas hold
+    # then waits on vision, so this need not cover the whole countdown).
+    sp_start_delay_s: float = 2.0
     # Stop after this many laps (or stop manually with the grind hotkey/button).
     sp_max_iterations: int = 100
 
