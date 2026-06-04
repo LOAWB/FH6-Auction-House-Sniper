@@ -35,7 +35,6 @@ _SETTINGS_FIELDS = (
     ("AUTO-STOP",        "max_minutes",            "Max minutes",            "float",  None),
     ("SKILL GRIND",      "gas_key",                "Gas key (w)",            "str",    None),
     ("SKILL GRIND",      "sp_race_hold_s",         "Max race seconds (cap)", "float",  None),
-    ("SKILL GRIND",      "sp_start_delay_s",       "Post-start settle (s)",  "float",  None),
     ("SKILL GRIND",      "sp_restart_settle_s",    "Results settle (s)",     "float",  None),
     ("SKILL GRIND",      "sp_max_iterations",      "Max laps",               "int",    None),
     ("HOTKEYS",          "hotkey_start_stop",      "Start / stop hotkey",    "str",    None),

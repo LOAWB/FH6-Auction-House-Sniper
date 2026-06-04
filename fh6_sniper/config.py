@@ -129,18 +129,20 @@ class Config:
     # Reset / restart key on the results screen (X). Must be in actions.KEY_MAP.
     sp_restart_key: str = "x"
     # Press Restart up to this many times, each waiting sp_reset_timeout_s for
-    # the results screen to clear, before giving up on the reset for this lap.
+    # the pre-race "Start Race Event" menu to appear, before giving up for this
+    # lap. (Reset is confirmed by the menu showing, not just results clearing.)
     sp_reset_attempts: int = 4
-    sp_reset_timeout_s: float = 4.0
-    # Pause between Restart and the "start race event" confirm, so that screen
-    # is up before Enter is pressed.
-    sp_confirm_delay_s: float = 1.5
-    # Key that starts the race event after restarting (Enter). Set blank ("") to
-    # skip this press if your route restarts straight into the countdown.
+    sp_reset_timeout_s: float = 5.0
+    # Key that launches the race from the start menu (Enter selects the already-
+    # highlighted "Start Race Event"). Set blank ("") to skip if your route
+    # restarts straight into the countdown.
     sp_start_key: str = "enter"
-    # Small settle after starting before the next gas hold begins (the gas hold
-    # then waits on vision, so this need not cover the whole countdown).
-    sp_start_delay_s: float = 2.0
+    # Match confidence for the start-race menu, and how many times to press the
+    # start key (each waiting sp_start_timeout_s for the menu to disappear =
+    # race launching) before giving up for this lap.
+    sp_start_threshold: float = 0.70
+    sp_start_attempts: int = 4
+    sp_start_timeout_s: float = 5.0
     # Stop after this many laps (or stop manually with the grind hotkey/button).
     sp_max_iterations: int = 100
 

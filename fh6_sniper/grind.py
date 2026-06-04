@@ -28,14 +28,17 @@ class SkillGrinder:
         self._stop = False
         self.laps = 0
         self._results_tmpl = self._load_results_template()
+        self._start_tmpl = self._load_template("sp_start.png")
 
-    def _load_results_template(self):
-        path = paths.app_dir() / self.cfg.template_dir / "sp_results.png"
+    def _load_template(self, name):
+        path = paths.app_dir() / self.cfg.template_dir / name
         img = cv2.imread(str(path))
         if img is None:
-            log.warning("grind: results template missing (%s) - falling back "
-                        "to timed holds", path)
+            log.warning("grind: template missing (%s)", path)
         return img
+
+    def _load_results_template(self):
+        return self._load_template("sp_results.png")
 
     def request_stop(self) -> None:
         self._stop = True
@@ -57,6 +60,14 @@ class SkillGrinder:
         frame = capture.grab_screen(self.cfg.window_title)
         return vision.is_sp_results(
             frame, self._results_tmpl, self.cfg.sp_results_threshold)
+
+    def _on_start_menu(self) -> bool:
+        """True if the pre-race 'Start Race Event' menu is currently showing."""
+        if self._start_tmpl is None:
+            return False
+        frame = capture.grab_screen(self.cfg.window_title)
+        return vision.is_sp_start_menu(
+            frame, self._start_tmpl, self.cfg.sp_start_threshold)
 
     def _interruptible_sleep(self, seconds: float) -> bool:
         """Sleep in slices so a stop request is honoured promptly.
@@ -94,12 +105,12 @@ class SkillGrinder:
         finally:
             actions.key_up(key, use_win32=win32)
 
-    def _reset(self) -> bool:
-        """Press Restart until the results screen clears (confirming the reset
-        actually took). Returns True on success. If there is no template we
-        can't verify, so press once and assume it worked."""
+    def _reset_to_menu(self) -> bool:
+        """Press Restart until the pre-race start menu appears (confirming the
+        reset actually took and we're ready to launch). Returns True on success.
+        Without the menu template we can't verify, so press once and assume."""
         cfg = self.cfg
-        if self._results_tmpl is None:
+        if self._start_tmpl is None:
             self._press(cfg.sp_restart_key)
             return True
         for attempt in range(cfg.sp_reset_attempts):
@@ -110,10 +121,34 @@ class SkillGrinder:
             while self.clock() < deadline:
                 if self._stop:
                     return False
-                if not self._on_results():
-                    return True                 # results cleared -> reset took
+                if self._on_start_menu():
+                    return True             # on the start menu -> reset took
                 self.sleeper(0.2)
-            log.info("grind: results still up after restart #%d, retrying",
+            log.info("grind: start menu not up after restart #%d, retrying",
+                     attempt + 1)
+        return False
+
+    def _start_race(self) -> bool:
+        """Press the start key until the start menu disappears (race launching).
+        Returns True on success. No menu template -> press once and assume."""
+        cfg = self.cfg
+        if not cfg.sp_start_key:
+            return True
+        if self._start_tmpl is None:
+            self._press(cfg.sp_start_key)
+            return True
+        for attempt in range(cfg.sp_start_attempts):
+            if self._stop:
+                return False
+            self._press(cfg.sp_start_key)
+            deadline = self.clock() + cfg.sp_start_timeout_s
+            while self.clock() < deadline:
+                if self._stop:
+                    return False
+                if not self._on_start_menu():
+                    return True             # menu gone -> race is launching
+                self.sleeper(0.2)
+            log.info("grind: start menu still up after start #%d, retrying",
                      attempt + 1)
         return False
 
@@ -150,22 +185,24 @@ class SkillGrinder:
                 self.on_lap(self.laps, total)
             if i + 1 >= total:
                 break                               # last lap, no restart
-            # Reset (X) until results clears, then start the race event (Enter).
+            # Reset (X) until the start menu is up, then start the race (Enter)
+            # until the menu disappears - both vision-confirmed, no blind waits.
             self._status(f"Skill grind {i + 1}/{total} done: restarting")
             if not self._interruptible_sleep(cfg.sp_restart_settle_s):
                 break
-            if not self._reset():
+            if not self._reset_to_menu():
                 if self._stop:
                     break
                 self._status(f"Skill grind {i + 1}/{total}: "
                              "restart not confirmed, retrying")
                 continue                            # re-watch; try again
-            if cfg.sp_start_key:                    # start the race event
-                if not self._interruptible_sleep(cfg.sp_confirm_delay_s):
+            self._status(f"Skill grind {i + 1}/{total}: starting race")
+            if not self._start_race():
+                if self._stop:
                     break
-                self._press(cfg.sp_start_key)
-            if not self._interruptible_sleep(cfg.sp_start_delay_s):
-                break
+                self._status(f"Skill grind {i + 1}/{total}: "
+                             "start not confirmed, retrying")
+                continue
         if self._stop:
             self._status(f"Skill grind stopped ({self.laps} laps)")
             return "stopped"

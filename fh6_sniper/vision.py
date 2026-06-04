@@ -362,6 +362,27 @@ def is_sp_results(scene_bgr, template, threshold,
     return match_template(crop, template) >= threshold
 
 
+# Skill-grind start-race menu: the left-hand option list (Start Race Event /
+# Difficulty & Settings / Tune Car / Starting Grid / Quit Race). The bot lands
+# here after a reset and presses the start key to launch the next race. The
+# menu boxes are opaque so it matches across the changing car/scene behind it
+# (0.97 across backgrounds), and it's well separated from the results screen
+# (a results frame scores ~0.23 here, this menu scores ~0.16 on results).
+SP_START_REGION = (40, 600, 540, 990)
+
+
+def is_sp_start_menu(scene_bgr, template, threshold,
+                     region=SP_START_REGION) -> bool:
+    """True if the pre-race 'Start Race Event' menu is showing."""
+    if template is None:
+        return False
+    x1, y1, x2, y2 = region
+    crop = scene_bgr[y1:y2, x1:x2]
+    if crop.size == 0:
+        return False
+    return match_template(crop, template) >= threshold
+
+
 def is_card_sold(scene_bgr, region=SOLD_STAMP_REGION) -> bool:
     """True if the top result card shows the yellow SOLD stamp."""
     x1, y1, x2, y2 = region
