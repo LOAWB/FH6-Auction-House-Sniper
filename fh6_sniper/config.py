@@ -128,6 +128,12 @@ class Config:
     sp_restart_settle_s: float = 0.8
     # Reset / restart key on the results screen (X). Must be in actions.KEY_MAP.
     sp_restart_key: str = "x"
+    # After pressing Restart the game shows a "Restart Event" Yes/No dialog with
+    # Yes already highlighted. The grind confirms it by pressing this key. Match
+    # confidence for recognising that dialog (0.90-1.00 on a real match; every
+    # other grind screen scores <=0.54, so 0.70 separates cleanly).
+    sp_confirm_key: str = "enter"
+    sp_restart_confirm_threshold: float = 0.70
     # Press Restart up to this many times, each waiting sp_reset_timeout_s for
     # the pre-race "Start Race Event" menu to appear, before giving up for this
     # lap. (Reset is confirmed by the menu showing, not just results clearing.)
@@ -143,6 +149,9 @@ class Config:
     sp_start_threshold: float = 0.70
     sp_start_attempts: int = 4
     sp_start_timeout_s: float = 5.0
+    # Pause after each menu action (press X / Enter) before re-reading the
+    # screen, so the bot acts on a settled frame rather than mid-transition.
+    sp_loop_settle_s: float = 0.4
     # Stop after this many laps (or stop manually with the grind hotkey/button).
     sp_max_iterations: int = 100
 

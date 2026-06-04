@@ -2,6 +2,41 @@
 
 Newest changes first. Each section header is the release date.
 
+## fork - 2026-06-03e (LOAWB) - Skill grind: fix the Restart Event freeze
+
+The grind froze on the "Restart Event" Yes/No dialog that appears after pressing
+Restart (X) on the results screen. The bot recognised neither results nor the
+start menu there, fell through to "hold gas" (which does nothing on a modal),
+and looped forever.
+
+Mapped the real reset loop from capture: results -> X -> "Restart Event" confirm
+-> Enter (Yes) -> HORIZON load -> countdown -> driving. There is no start menu in
+the restart path.
+
+Refactored the grind into a self-healing per-screen action map, re-classified
+every loop so it handles the confirmation screens in any order and recovers from
+dropped keys:
+
+  - results          -> press Restart (X)
+  - restart_confirm  -> press Confirm (Enter, Yes)   [NEW]
+  - start_menu       -> press Start (Enter)
+  - driving/loading  -> hold gas until the screen changes
+
+Added templates/sp_restart_confirm.png (the input-independent lime "Restart
+Event" title + body, no prompt bar) and vision.is_sp_restart_confirm. Cross-
+discrimination: the dialog scores 0.90-1.00 on its own screen and <=0.54 on every
+other grind screen; driving tops out at 0.30, so it can never look like a finish
+or confirm. A lap counts only when a driven race finishes, and the grind stops at
+the lap target without kicking off another restart. The accelerator is always
+released on stop/exception. New tunables (also in the SKILL GRIND settings group):
+sp_confirm_key, sp_restart_confirm_threshold, sp_loop_settle_s.
+
+Validated offline: tools/sim_grind.py (33 checks: start from any screen, dropped
+keys, no double-count, gas always released, no freeze), tools/sim_sniper_maxbid.py
+(16 checks: Max Bid closed-loop across vertical shifts + dropped keys still good),
+tools/check_build.py (compile + config round-trip + settings coverage + templates),
+tools/check_template_discrimination.py (the matrix above).
+
 ## fork - 2026-06-03d (LOAWB) - Max Bid reliability over long runs
 
 Fix the bug where, after running a while, the bot would nudge the wrong filter

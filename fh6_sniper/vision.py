@@ -383,6 +383,33 @@ def is_sp_start_menu(scene_bgr, template, threshold,
     return match_template(crop, template) >= threshold
 
 
+# Skill-grind "Restart Event" confirmation dialog: the centred Yes/No prompt
+# that appears after pressing Restart (X) on the results screen, BEFORE the
+# race relaunches. Template is the solid lime "Restart Event" title bar plus
+# the body text ("Are you sure you want to restart the Event? ...") and the
+# Yes/No rows - all input-independent. The bottom prompt bar is deliberately
+# excluded because FH6 swaps it between "Enter Select" (keyboard) and the "A"
+# glyph (controller) based on the last input device. The match region is padded
+# generously so the dialog is found wherever it renders (the live game shifts
+# some screens ~one row down vs recorded video). Scores 0.90-1.00 on the dialog
+# and <=0.54 on every other grind screen (results/start/driving/loading), so a
+# 0.70 threshold separates it cleanly. Checked BEFORE results in the grind's
+# classifier, because a blurred copy of the results header sits behind it.
+SP_RESTART_REGION = (560, 340, 1360, 760)
+
+
+def is_sp_restart_confirm(scene_bgr, template, threshold,
+                          region=SP_RESTART_REGION) -> bool:
+    """True if the 'Restart Event' Yes/No confirmation dialog is showing."""
+    if template is None:
+        return False
+    x1, y1, x2, y2 = region
+    crop = scene_bgr[y1:y2, x1:x2]
+    if crop.size == 0:
+        return False
+    return match_template(crop, template) >= threshold
+
+
 def is_card_sold(scene_bgr, region=SOLD_STAMP_REGION) -> bool:
     """True if the top result card shows the yellow SOLD stamp."""
     x1, y1, x2, y2 = region
