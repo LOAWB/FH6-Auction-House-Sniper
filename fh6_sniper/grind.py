@@ -82,23 +82,27 @@ class SkillGrinder:
         for i in range(total):
             if self._stop:
                 break
-            self.laps = i
+            # Hold gas through the race (it finishes mid-hold).
             self._status(f"Skill grind {i + 1}/{total}: holding gas")
             if not self._hold_gas(cfg.sp_race_hold_s):
                 break
             if self._stop:
                 break
-            # Let the results screen (A Continue / X Restart) settle, then
-            # press Restart and wait for the reload + 3-2-1 countdown.
-            self._status(f"Skill grind {i + 1}/{total}: restarting")
-            if not self._interruptible_sleep(cfg.sp_restart_settle_s):
-                break
-            self._press(cfg.sp_restart_key)
-            self.laps = i + 1
+            self.laps = i + 1                               # this race is done
             if self.on_lap:
                 self.on_lap(self.laps, total)
             if i + 1 >= total:
+                break                                       # last lap, no restart
+            # Reset (X) on the results screen, then start the race event
+            # (Enter), then wait for the reload + 3-2-1 countdown.
+            self._status(f"Skill grind {i + 1}/{total} done: restarting")
+            if not self._interruptible_sleep(cfg.sp_restart_settle_s):
                 break
+            self._press(cfg.sp_restart_key)                 # reset
+            if cfg.sp_start_key:                            # start race event
+                if not self._interruptible_sleep(cfg.sp_confirm_delay_s):
+                    break
+                self._press(cfg.sp_start_key)
             if not self._interruptible_sleep(cfg.sp_start_delay_s):
                 break
         if self._stop:

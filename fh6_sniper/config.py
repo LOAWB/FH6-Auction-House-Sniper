@@ -113,18 +113,24 @@ class Config:
     # Repeats: hold gas through the race, press Restart, wait for the next race
     # to start, repeat - to farm a short "SP Farm" custom route. Independent of
     # the auction sniper; only one mode runs at a time.
-    # Key that accelerates the car. FH6 keyboard default is the Up arrow; set to
-    # "w" if you drive with WASD. Must be one of actions.KEY_MAP.
-    gas_key: str = "up"
+    # Key that accelerates the car (held during the race). On the ROG Ally
+    # keyboard this is "w". Must be one of actions.KEY_MAP.
+    gas_key: str = "w"
     # Seconds to hold the accelerator each lap. Make it a touch longer than the
     # race so the car definitely crosses the finish (24s race -> ~26s).
     sp_race_hold_s: float = 26.0
     # Pause after the race finishes before pressing Restart, so the results
     # screen (A Continue / X Restart) is up and ready for the key.
     sp_restart_settle_s: float = 1.2
-    # Restart button on the results screen (X). Must be in actions.KEY_MAP.
+    # Reset / restart key on the results screen (X). Must be in actions.KEY_MAP.
     sp_restart_key: str = "x"
-    # Seconds to wait after Restart for the reload + 3-2-1 countdown before the
+    # Pause between Restart and the "start race event" confirm, so that screen
+    # is up before Enter is pressed.
+    sp_confirm_delay_s: float = 1.5
+    # Key that starts the race event after restarting (Enter). Set blank ("") to
+    # skip this press if your route restarts straight into the countdown.
+    sp_start_key: str = "enter"
+    # Seconds to wait after starting for the reload + 3-2-1 countdown before the
     # next gas hold begins. Bump if your reload is slow.
     sp_start_delay_s: float = 8.0
     # Stop after this many laps (or stop manually with the grind hotkey/button).
