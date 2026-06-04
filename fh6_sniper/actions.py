@@ -28,6 +28,12 @@ KEY_MAP = {
     "left": Key.left,
     "right": Key.right,
     "y": "y",
+    "x": "x",
+    "a": "a",
+    "w": "w",
+    "s": "s",
+    "d": "d",
+    "space": Key.space,
 }
 
 VK_CODES = {
@@ -38,6 +44,12 @@ VK_CODES = {
     "left": 0x25,
     "right": 0x27,
     "y": 0x59,
+    "x": 0x58,
+    "a": 0x41,
+    "w": 0x57,
+    "s": 0x53,
+    "d": 0x44,
+    "space": 0x20,
 }
 
 
@@ -84,3 +96,24 @@ def tap_key(name, times, key_hold_ms, between_keys_ms,
     for _ in range(times):
         press_key(name, key_hold_ms, between_keys_ms,
                   use_win32, keyboard, sleep)
+
+
+def key_down(name, use_win32=False, keyboard=_DEFAULT_KEYBOARD) -> None:
+    """Press and HOLD a key (no release). Pair with key_up. Used to hold the
+    accelerator during the skill-point grind."""
+    if use_win32:
+        hwnd = get_hwnd()
+        if hwnd:
+            win32gui.PostMessage(hwnd, win32con.WM_KEYDOWN, VK_CODES[name], 0)
+    else:
+        keyboard.press(KEY_MAP[name])
+
+
+def key_up(name, use_win32=False, keyboard=_DEFAULT_KEYBOARD) -> None:
+    """Release a key held with key_down."""
+    if use_win32:
+        hwnd = get_hwnd()
+        if hwnd:
+            win32gui.PostMessage(hwnd, win32con.WM_KEYUP, VK_CODES[name], 0)
+    else:
+        keyboard.release(KEY_MAP[name])

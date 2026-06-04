@@ -106,7 +106,29 @@ class Config:
     # global hotkeys (pynput format)
     hotkey_start_stop: str = "<f8>"
     hotkey_panic: str = "<f9>"
+    hotkey_sp_grind: str = "<f7>"
     win32_api_input: bool = False
+
+    # --- Skill-point grind (separate mode, own hotkey/button) ---------------
+    # Repeats: hold gas through the race, press Restart, wait for the next race
+    # to start, repeat - to farm a short "SP Farm" custom route. Independent of
+    # the auction sniper; only one mode runs at a time.
+    # Key that accelerates the car. FH6 keyboard default is the Up arrow; set to
+    # "w" if you drive with WASD. Must be one of actions.KEY_MAP.
+    gas_key: str = "up"
+    # Seconds to hold the accelerator each lap. Make it a touch longer than the
+    # race so the car definitely crosses the finish (24s race -> ~26s).
+    sp_race_hold_s: float = 26.0
+    # Pause after the race finishes before pressing Restart, so the results
+    # screen (A Continue / X Restart) is up and ready for the key.
+    sp_restart_settle_s: float = 1.2
+    # Restart button on the results screen (X). Must be in actions.KEY_MAP.
+    sp_restart_key: str = "x"
+    # Seconds to wait after Restart for the reload + 3-2-1 countdown before the
+    # next gas hold begins. Bump if your reload is slow.
+    sp_start_delay_s: float = 8.0
+    # Stop after this many laps (or stop manually with the grind hotkey/button).
+    sp_max_iterations: int = 100
 
     def effective_lime_bounds(self) -> tuple:
         """Return the (lower, upper) HSV bounds to use right now."""

@@ -33,8 +33,14 @@ _SETTINGS_FIELDS = (
     ("SNIPER BEHAVIOUR", "buyout_select_delay_ms", "Buyout select delay (ms)", "int",  None),
     ("AUTO-STOP",        "max_cars",               "Max cars",               "int",    None),
     ("AUTO-STOP",        "max_minutes",            "Max minutes",            "float",  None),
+    ("SKILL GRIND",      "gas_key",                "Gas key (up or w)",      "str",    None),
+    ("SKILL GRIND",      "sp_race_hold_s",         "Hold gas (seconds)",     "float",  None),
+    ("SKILL GRIND",      "sp_start_delay_s",       "Restart wait (seconds)", "float",  None),
+    ("SKILL GRIND",      "sp_restart_settle_s",    "Finish settle (seconds)", "float", None),
+    ("SKILL GRIND",      "sp_max_iterations",      "Max laps",               "int",    None),
     ("HOTKEYS",          "hotkey_start_stop",      "Start / stop hotkey",    "str",    None),
     ("HOTKEYS",          "hotkey_panic",           "Panic stop hotkey",      "str",    None),
+    ("HOTKEYS",          "hotkey_sp_grind",        "Skill grind hotkey",     "str",    None),
 )
 
 
@@ -54,6 +60,9 @@ class Overlay:
         self._fails_var = tk.StringVar(value="0")
         self._time_var = tk.StringVar(value="00:00")
         self._active = False
+        self._grind_active = False
+        self._grind_base = _AMBER
+        self._grind_hover = "#d8962f"
         self._started = None
         self._drag = (0, 0)
         self._btn_base = _LIME
@@ -130,7 +139,7 @@ class Overlay:
         self._build_status_tab(self._body)
         self._build_settings_tab(self._body)
 
-        tk.Label(root, text="F8  start / stop          F9  panic",
+        tk.Label(root, text="F8  snipe      F7  skill grind      F9  panic",
                  bg=_BG, fg=_DIM, font=("Segoe UI", 8)).pack(pady=(12, 15))
 
     def _build_tab_bar(self, root):
@@ -169,6 +178,17 @@ class Overlay:
         self._btn.bind("<Leave>",
                        lambda _e: self._btn.config(bg=self._btn_base))
         self._set_button(running=False)
+
+        self._grind_btn = tk.Button(
+            frame, text="SKILL GRIND", font=("Segoe UI", 10, "bold"),
+            relief="flat", bd=0, highlightthickness=0, cursor="hand2",
+            height=2)
+        self._grind_btn.pack(fill="x", padx=18, pady=(8, 0))
+        self._grind_btn.bind(
+            "<Enter>", lambda _e: self._grind_btn.config(bg=self._grind_hover))
+        self._grind_btn.bind(
+            "<Leave>", lambda _e: self._grind_btn.config(bg=self._grind_base))
+        self._set_grind_button(running=False)
         self._tab_frames["STATUS"] = frame
 
     def _build_stats(self, parent):
@@ -491,6 +511,33 @@ class Overlay:
         self._btn.config(text=text, bg=base, fg=fg,
                          activebackground=hover, activeforeground=fg)
 
+    def _set_grind_button(self, running: bool):
+        if running:
+            text, base, hover, fg = "STOP GRIND", _STOP, _STOP_HV, "#ffffff"
+        else:
+            text, base, hover, fg = "SKILL GRIND", _AMBER, "#d8962f", _BG
+        self._grind_base, self._grind_hover = base, hover
+        self._grind_btn.config(text=text, bg=base, fg=fg,
+                               activebackground=hover, activeforeground=fg)
+
+    def set_grind_running(self, running: bool):
+        """Thread-safe: reflect skill-grind run state on its button."""
+        def _apply():
+            self._grind_active = running
+            self._set_grind_button(running)
+            if running and self._started is None:
+                self._started = time.monotonic()
+                self._time_var.set("00:00")
+            self._active = running or self._active
+        try:
+            self.root.after(0, _apply)
+        except RuntimeError:
+            pass
+
+    def on_grind_toggle(self, callback):
+        """Wire the SKILL GRIND button to a callback."""
+        self._grind_btn.config(command=callback)
+
     @staticmethod
     def _state_of(text: str) -> str:
         low = text.lower()
@@ -508,7 +555,10 @@ class Overlay:
         self._status.config(
             fg={"running": _LIME, "paused": _AMBER, "stopped": _DIM}[state])
         running = state != "stopped"
-        self._set_button(running)
+        # While the skill grind owns the status line, leave the sniper's
+        # START button alone (the grind has its own STOP GRIND button).
+        if not self._grind_active:
+            self._set_button(running)
         if running and self._started is None:    # first ever start, init timer
             self._started = time.monotonic()
             self._time_var.set("00:00")
