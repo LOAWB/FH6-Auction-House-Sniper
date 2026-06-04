@@ -342,10 +342,12 @@ SLOT_POPULATED_WHITE_S_MAX = 25
 SLOT_POPULATED_WHITE_MIN = 30      # min pixels matching the above per slot
 
 
-# Skill-grind results screen: the "A Continue / X Restart / Y Watch Replay"
-# prompt bar along the bottom. Distinct and stable, so it cleanly marks "the
-# race finished and Restart is available". Region is padded for vertical shift.
-SP_RESULTS_REGION = (30, 930, 1000, 1080)
+# Skill-grind results screen: the lime "Driver / Car / Class / Progress / Time"
+# leaderboard header. Chosen because it is identical regardless of input device
+# (the bottom prompt bar swaps between controller glyphs and keyboard labels
+# depending on the last input, but this header never changes), and it scores
+# 1.0 on results frames vs ~0.17 while driving. Region padded for setup shift.
+SP_RESULTS_REGION = (280, 180, 1620, 340)
 
 
 def is_sp_results(scene_bgr, template, threshold,
